@@ -263,7 +263,7 @@ class ExternalProcessPlugin(AbstractPlugin):
         protocol = ExternalProcessProtocol(self)
         name = path.split('/')[-1]
         logging.debug("Executing %s %s" % (path, " ".join([name] + arguments)))
-        self.process = reactor.spawnProcess(protocol, path, [name] + arguments)
+        self.process = reactor.spawnProcess(protocol, path, [name] + arguments, None)
 
     def do_process_ended(self, status):
         logging.debug("ExternalProcessPlugin.do_process_ended")
