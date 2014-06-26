@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 from flask import jsonify, request
-from minion.backend.views.base import api_guard, groups, sites, scans, sanitize_time
+from minion.backend.views.base import api_guard, groups, sites, scans, issues, sanitize_time
 from minion.backend.app import app
+from minion.backend.views.scans import permission
 
 #
 # Search for issues:
@@ -60,10 +61,28 @@ def get_issues():
                                 "sessions": []}}
                 for session in scan["sessions"]:
                     s = {"plugin": {"class": session["plugin"]["class"]}, "issues": []}
-                    for issue in session['issues']:
+                    for issue_id in session['issues']:
+                        issue = issues.find_one({"Id": issue_id})
                         if issue['Code'] in issue_codes:
                             s["issues"].append({"summary": issue["Summary"], "id": issue["Id"], "code": issue["Code"]})
                     hit["scan"]["sessions"].append(s)
                 issues.append(hit)
 
     return jsonify(success=True, issues=issues)
+
+@app.route('/issue/tagFalsePositive', methods=['POST'])
+@api_guard('application/json')
+@permission
+def tag_false_positive():
+
+    # Retrieve issued ID and boolean
+    issue_id = request.json["issueId"]
+    boolean = request.json["boolean"]
+
+    # Try to tag or untag the issue
+    issue = issues.find_and_modify({"Id": issue_id}, {"$set": {"False_positive": boolean}})
+
+    if issue is None:
+        return jsonify(success=False, reason="no-such-issue")
+
+    return jsonify(success=True)

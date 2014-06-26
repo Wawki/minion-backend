@@ -25,6 +25,7 @@ plans = mongo_client.minion.plans
 scans = mongo_client.minion.scans
 sites = mongo_client.minion.sites
 users = mongo_client.minion.users
+issues = mongo_client.minion.issues
 
 def api_guard(*decor_args):
     """ Decorate a view function to be protected by requiring
@@ -114,6 +115,11 @@ def sanitize_session(session):
     for field in ('created', 'queued', 'started', 'finished'):
         if session.get(field) is not None:
             session[field] = calendar.timegm(session[field].utctimetuple())
+    if session.get('issues') is not None:
+        for idx, issue_id in enumerate(session['issues']):
+            session['issues'][idx] = issues.find_one({"Id": issue_id})
+            del session['issues'][idx]["_id"]
+
     return session
 
 def sanitize_time(t):

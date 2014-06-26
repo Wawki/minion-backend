@@ -10,7 +10,7 @@ from flask import jsonify, request
 import minion.backend.utils as backend_utils
 import minion.backend.tasks as tasks
 from minion.backend.app import app
-from minion.backend.views.base import api_guard, scans, sites, users
+from minion.backend.views.base import api_guard, scans, sites, users, issues
 from minion.backend.views.users import _find_sites_for_user, _find_sites_for_user_by_group_name
 from minion.backend.views.scans import sanitize_scan, summarize_scan
 
@@ -118,7 +118,8 @@ def get_reports_issues():
                 for plan_name in site['plans']:
                     for s in scans.find({'configuration.target':site['url'], 'plan.name': plan_name}).sort("created", -1).limit(1):
                         for session in s['sessions']:
-                            for issue in session['issues']:
+                            for issue_id in session['issues']:
+                                issue = issues.find_one({'Id': issue_id})
                                 r['issues'].append({'severity': issue['Severity'],
                                                     'summary': issue['Summary'],
                                                     'scan': { 'id': s['id'] },
