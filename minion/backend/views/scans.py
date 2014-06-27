@@ -9,7 +9,7 @@ from flask import jsonify, request
 import minion.backend.utils as backend_utils
 import minion.backend.tasks as tasks
 from minion.backend.app import app
-from minion.backend.views.base import api_guard, groups, plans, plugins, scans, sanitize_session, users, sites
+from minion.backend.views.base import api_guard, groups, plans, plugins, scans, sanitize_session, users, sites, issues
 from minion.backend.views.plans import sanitize_plan
 
 def permission(view):
@@ -39,6 +39,7 @@ def sanitize_scan(scan):
     if 'sessions' in scan:
         for session in scan['sessions']:
             sanitize_session(session)
+
     return scan
 
 def summarize_scan(scan):
@@ -46,7 +47,7 @@ def summarize_scan(scan):
         count = 0
         for session in scan['sessions']:
             for issue in session['issues']:
-                if issue['Severity'] == severity:
+                if not issue['False_positive'] and issue['Severity'] == severity:
                     count += 1
         return count
     summary = { 'id': scan['id'],

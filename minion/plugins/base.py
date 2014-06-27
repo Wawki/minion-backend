@@ -8,6 +8,7 @@ import os
 import sys
 import urlparse
 import uuid
+import hashlib
 
 from twisted.internet import reactor
 from twisted.internet.threads import deferToThread
@@ -141,7 +142,31 @@ class AbstractPlugin:
     def report_issues(self, issues):
         if issues:
             for issue in issues:
-                issue['Id'] = str(uuid.uuid4())
+                # Generate a unique Id for each issue
+                summary = issue["Summary"] if ("Summary" in issue) else ""
+                cwe_id = issue["Classification"]["cwe_id"] if "Classification" in issue and "cwe_id" in issue["Classification"] else ""
+                url = ""
+                param = ""
+                port = ""
+                if "URLs" in issue and issue["URLs"]:
+                    first_url = issue["URLs"][0]
+                    url = first_url["URL"] if "URL" in first_url else ""
+                    param = first_url["Parameter"] if "Parameter" in first_url else ""
+                if "Ports" in issue and issue["Ports"]:
+                    port = issue["Ports"][0]
+                # Case web issue ( Hash => CWE_ID:URL:parameter )
+                if param:
+                    id = cwe_id + ":" + url + ":" + param
+                # Case not a web issue ( Hash => Summary:CWE_ID:URL or Summary:CWE_ID:URL:Port )
+                else:
+                    id = summary + ":" + cwe_id + ":" + url
+                    if port:
+                        id += ":" + str(port)
+
+                hash_id = hashlib.sha256(id.encode())
+                issue['Id'] = hash_id.hexdigest()
+                if not 'False_positive' in issue:
+                    issue['False_positive'] = False
             self.callbacks.report_issues(issues)
 
     def report_issue(self, issue):

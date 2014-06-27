@@ -41,6 +41,7 @@ if cfg.get('mongodb') is not None:
     db = mongodb.minion
     plans = db.plans
     scans = db.scans
+    issues = db.issues
 
 logger = get_task_logger(__name__)
 
@@ -181,8 +182,14 @@ def session_set_task_id(scan_id, session_id, task_id):
 
 @celery.task
 def session_report_issue(scan_id, session_id, issue):
+    # Check if the issue already exists.
+    # If not, insert it in the collection then put the reference in the scan,
+    # else just put the reference in the scan
+    found_issue = issues.find_one({"Id": issue["Id"]})
+    if found_issue is None:
+        issues.insert(issue)
     scans.update({"id": scan_id, "sessions.id": session_id},
-                 {"$push": {"sessions.$.issues": issue}})
+                 {"$push": {"sessions.$.issues": issue["Id"]}})
 
 @celery.task
 def session_finish(scan_id, session_id, state, t, failure=None):
