@@ -47,7 +47,7 @@ def summarize_scan(scan):
         count = 0
         for session in scan['sessions']:
             for issue in session['issues']:
-                if not issue['False_positive'] and issue['Severity'] == severity:
+                if not issue['False_positive'] and not issue['Ignored'] and issue['Severity'] == severity:
                     count += 1
         return count
     summary = { 'id': scan['id'],
