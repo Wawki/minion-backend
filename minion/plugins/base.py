@@ -32,7 +32,7 @@ class IPluginRunnerCallbacks(zope.interface.Interface):
         """Plugin has issues to report."""
     def report_artifacts(name, paths):
         """Plugin has files available."""
-    def report_finish(state = None):
+    def report_finish(state = None, failure=""):
         """Plugin is done"""
 
 
@@ -177,8 +177,8 @@ class AbstractPlugin:
     def report_artifacts(self, name, paths):
         self.callbacks.report_artifacts(name, paths)
 
-    def report_finish(self, state=EXIT_STATE_FINISHED):
-        self.callbacks.report_finish(state=state)
+    def report_finish(self, state=EXIT_STATE_FINISHED, failure=""):
+        self.callbacks.report_finish(state=state, failure=failure)
         reactor.stop()
 
     def format_report(self, issue_key, format_list):
