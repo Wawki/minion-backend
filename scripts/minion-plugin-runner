@@ -43,7 +43,7 @@ class JSONCallbacks:
             self._write({"msg": "issue", "data": issue})
 
     def report_artifacts(self, name, paths):
-        pass
+        self._write({"msg": "artifact", "data": {"name": name, "paths": paths}})
 
     def report_finish(self, state = "FINISHED"):
         self._write({"msg": "finish", "data": {"state": state}})

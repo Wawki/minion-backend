@@ -4,7 +4,7 @@ import calendar
 import datetime
 import functools
 import uuid
-from flask import jsonify, request
+from flask import jsonify, request, send_file
 
 import minion.backend.utils as backend_utils
 import minion.backend.tasks as tasks
@@ -140,7 +140,7 @@ def post_scan_create():
                     "plugin": plugins[step['plugin_name']]['descriptor'],
                     "configuration": session_configuration, # TODO Do recursive merging here, not just at the top level
                     "description": step["description"],
-                    "artifacts": {},
+                    "artifacts": [],
                     "issues": [],
                     "created": now,
                     "queued": None,
@@ -187,3 +187,18 @@ def put_scan_control(scan_id):
         scans.update({"id": scan_id}, {"$set": {"state": "STOPPING", "queued": datetime.datetime.utcnow()}})
         tasks.scan_stop.apply_async([scan['id']], queue='state')
     return jsonify(success=True)
+
+@app.route("/scans/<scan_id>/artifact/<artifact_name>", methods=["GET"])
+@permission
+def get_artifact(scan_id, artifact_name):
+    # Find the scan
+    scan = scans.find_one({"id": scan_id})
+    if not scan:
+        return jsonify(success=False, error='no-such-scan')
+    # Find the artifact
+    for session in scan['sessions']:
+        for artifact in session['artifacts']:
+            for path in artifact['paths']:
+                if artifact_name in path['path']:
+                    return send_file(path['path'])
+    return jsonify(success=False, error='no-such-artifact')

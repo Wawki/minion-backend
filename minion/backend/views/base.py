@@ -7,6 +7,7 @@ import inspect
 import json
 import pkgutil
 import operator
+import os
 
 from flask import abort, Flask, jsonify, request, session
 from pymongo import MongoClient
@@ -114,6 +115,9 @@ def sanitize_session(session):
     for field in ('created', 'queued', 'started', 'finished'):
         if session.get(field) is not None:
             session[field] = calendar.timegm(session[field].utctimetuple())
+    for artifact in session['artifacts']:
+        for idx, path in artifact['paths']:
+            artifact['paths'][idx] = os.path.basename(path)
     return session
 
 def sanitize_time(t):
