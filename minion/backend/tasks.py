@@ -192,6 +192,11 @@ def session_report_issue(scan_id, session_id, issue):
                  {"$push": {"sessions.$.issues": issue["Id"]}})
 
 @celery.task
+def session_report_artifact(scan_id, session_id, artifact):
+    scans.update({"id": scan_id, "sessions.id": session_id},
+                 {"$push": {"sessions.$.artifacts": artifact}})
+
+@celery.task
 def session_finish(scan_id, session_id, state, t, failure=None):
     if failure:
         scans.update({"id": scan_id, "sessions.id": session_id},
@@ -462,6 +467,12 @@ def run_plugin(scan_id, session_id):
                 # Progress: update the progress
                 if msg['msg'] == 'progress':
                     pass # TODO
+
+                # Artifact: save the report
+                if msg['msg'] == 'artifact':
+                    send_task("minion.backend.tasks.session_report_artifact",
+                              args=[scan_id, session_id, msg['data']],
+                              queue='state').get()
 
                 # Finish: update the session state, wait for the plugin runner to finish, return the state
                 if msg['msg'] == 'finish':
