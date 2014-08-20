@@ -120,7 +120,7 @@ def sanitize_session(session):
         for idx, issue_id in enumerate(session['issues']):
             session['issues'][idx] = issues.find_one({"Id": issue_id})
             del session['issues'][idx]["_id"]
-	for artifact in session['artifacts']:
+    for artifact in session['artifacts']:
         for idx, path in artifact['paths']:
             artifact['paths'][idx] = os.path.basename(path)
 
