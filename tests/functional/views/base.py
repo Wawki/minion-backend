@@ -317,6 +317,28 @@ class Scan(Resource):
         return self.session.put(self.api + "/" + scan_id + "/control",
             data=state, params={"email": email})
 
+class Issue(Resource):
+    def __init__(self, issue_id):
+        super(Issue, self).__init__()
+        self.api = self.domain + "/issue"
+        self.issue_id = issue_id
+
+    def tag_issue_as_false_positive(self):
+        return self.session.post(self.api + "/tagFalsePositive",
+                                 data=json.dumps({
+                                     "issueId": self.issue_id,
+                                     "boolean": True
+                                 }),
+                                 headers=self.json_header)
+
+    def tag_issue_as_ignored(self):
+        return self.session.post(self.api + "/tagIgnored",
+                                 data=json.dumps({
+                                     "issueId": self.issue_id,
+                                     "boolean": True
+                                 }),
+                                 headers=self.json_header)
+
 class Plugins(Resource):
     def __init__(self):
         super(Plugins, self).__init__()

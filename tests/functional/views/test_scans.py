@@ -4,7 +4,7 @@
 
 import time
 
-from base import (TestAPIBaseClass, User, Site, Group, Plan, Scan, Scans, Reports)
+from base import (TestAPIBaseClass, User, Site, Group, Plan, Scan, Scans, Issue, Reports)
 
 class TestScanAPIs(TestAPIBaseClass):
     TEST_PLAN = {
@@ -117,6 +117,8 @@ class TestScanAPIs(TestAPIBaseClass):
         5. GET /reports/history
         6. GET /reports/status
         7. GET /reports/issues
+        8. POST /issue/tagFalsePositive
+        9. POST /issue/tagIgnored
 
         """
 
@@ -151,7 +153,7 @@ class TestScanAPIs(TestAPIBaseClass):
         # now check if the scan has completed or not
         res4 = scan.get_scan_details(scan_id)
         self.assertEqual(res4.json()['scan']['state'], 'FINISHED')
-        
+
         # GET /scans/<scan_id>/summary
         res5 = scan.get_summary(scan_id)
         # bug #106 include scan creator in the output
@@ -187,3 +189,13 @@ class TestScanAPIs(TestAPIBaseClass):
         self.assertEqual('Info', issues[0]['severity'])
         self.assertEqual(issues[0]["severity"], "Info")
         self.assertEqual(res8.json()['report'][0]['target'], self.target_url)
+
+        issue = Issue(issues[0]['id'])
+        # POST /issue/tagFalsePositive
+        # Try to tag an issue as false positive
+        res9 = issue.tag_issue_as_false_positive()
+        self.assertTrue(res9.json()['success'])
+        # POST /issue/tagIgnored
+        # Try to tag an issue as ignored
+        res10 = issue.tag_issue_as_false_positive()
+        self.assertTrue(res10.json()['success'])
