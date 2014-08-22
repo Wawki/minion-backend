@@ -116,7 +116,7 @@ def sanitize_session(session):
         if session.get(field) is not None:
             session[field] = calendar.timegm(session[field].utctimetuple())
     for artifact in session['artifacts']:
-        for idx, path in artifact['paths']:
+        for idx, path in enumerate(artifact['paths']):
             artifact['paths'][idx] = os.path.basename(path)
     return session
 
