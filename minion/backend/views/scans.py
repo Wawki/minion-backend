@@ -200,6 +200,6 @@ def get_artifact(scan_id, artifact_name):
     for session in scan['sessions']:
         for artifact in session['artifacts']:
             for path in artifact['paths']:
-                if artifact_name in path['path']:
-                    return send_file(path['path'])
+                if artifact_name in path:
+                    return send_file(path)
     return jsonify(success=False, error='no-such-artifact')
