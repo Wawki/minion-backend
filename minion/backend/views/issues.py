@@ -70,34 +70,24 @@ def get_issues():
 
     return jsonify(success=True, issues=issues)
 
-@app.route('/issue/tagFalsePositive', methods=['POST'])
+@app.route('/issue/tagIssue', methods=['POST'])
 @api_guard('application/json')
 @permission
-def tag_false_positive():
+def tag_issue():
 
     # Retrieve issued ID and boolean
     issue_id = request.json["issueId"]
     boolean = request.json["boolean"]
+    status = request.json["status"]
+    old_issue = issues.find_one({"Id": issue_id})
+
+    print old_issue['Status']
 
     # Try to tag or untag the issue
-    issue = issues.find_and_modify({"Id": issue_id}, {"$set": {"False_positive": boolean}})
-
-    if issue is None:
-        return jsonify(success=False, reason="no-such-issue")
-
-    return jsonify(success=True)
-
-@app.route('/issue/tagIgnored', methods=['POST'])
-@api_guard('application/json')
-@permission
-def tag_ignored():
-
-    # Retrieve issued ID and boolean
-    issue_id = request.json["issueId"]
-    boolean = request.json["boolean"]
-
-    # Try to tag or untag the issue
-    issue = issues.find_and_modify({"Id": issue_id}, {"$set": {"Ignored": boolean}})
+    if boolean:
+        issue = issues.find_and_modify({"Id": issue_id}, {"$set": {"Status": status, "OldStatus": old_issue['Status']}})
+    else:
+        issue = issues.find_and_modify({"Id": issue_id}, {"$set": {"Status": old_issue['OldStatus'], "OldStatus": old_issue['Status']}})
 
     if issue is None:
         return jsonify(success=False, reason="no-such-issue")
