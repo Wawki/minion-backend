@@ -235,7 +235,7 @@ def set_status_issues(scan_id):
                 # Else it's a new issue
                 if not in_second_to_last:
                     issues.update({"Id": issue},
-                                  {"$set": {"Status": "New", "OldStatus": "-"}})
+                                  {"$set": {"Status": "Current", "OldStatus": "-"}})
 
         for second_session in second_to_last_scan['sessions']:
             # For each issue in last scan (in each session)
@@ -264,7 +264,7 @@ def set_status_issues(scan_id):
         for session in last_scan['sessions']:
             for issue in session['issues']:
                 issues.update({"Id": issue},
-                              {"$set": {"Status": "New", "OldStatus": "-"}})
+                              {"$set": {"Status": "Current", "OldStatus": "-"}})
 
 
 # plugin_worker
