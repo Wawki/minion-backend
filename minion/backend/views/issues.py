@@ -81,8 +81,6 @@ def tag_issue():
     status = request.json["status"]
     old_issue = issues.find_one({"Id": issue_id})
 
-    print old_issue['Status']
-
     # Try to tag or untag the issue
     if boolean:
         issue = issues.find_and_modify({"Id": issue_id}, {"$set": {"Status": status, "OldStatus": old_issue['Status']}})
