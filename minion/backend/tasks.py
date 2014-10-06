@@ -221,7 +221,7 @@ def set_status_issues(scan_id):
                 in_second_to_last = False
                 for second_session in second_to_last_scan['sessions']:
                     if issue in second_session['issues']:
-                        old_issue = issues.find({"Id": issue})
+                        old_issue = issues.find_one({"Id": issue})
                         issues.update({"Id": issue},
                                       {"$set": {"Status": "Current", "OldStatus": old_issue['Status']}})
                         in_second_to_last = True
@@ -250,7 +250,7 @@ def set_status_issues(scan_id):
                     scans.update({"id": scan_id, "sessions.id": last_session_id},
                                  {"$push": {"sessions.$.issues": issue}})
 
-                    old_issue = issues.find({"Id": issue})
+                    old_issue = issues.find_one({"Id": issue})
                     issues.update({"Id": issue},
                                   {"$set": {"Status": "Fixed", "OldStatus": old_issue['Status']}})
 
