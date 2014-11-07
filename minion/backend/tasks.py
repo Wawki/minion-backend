@@ -208,10 +208,63 @@ def session_finish(scan_id, session_id, state, t, failure=None):
                      {"$set": {"sessions.$.state": state,
                                "sessions.$.finished": datetime.datetime.utcfromtimestamp(t)}})
 
+@celery.task
+def set_status_issues(scan_id):
+    scan = scans.find_one({"id": scan_id})
+    list_scan = list(scans.find({'configuration.target': scan['configuration']['target'], 'plan.name': scan['plan']['name']}).sort("created", -1))
+    last_scan = list_scan[0]
 
+    if len(list_scan) > 1:
 
+        second_to_last_scan = list_scan[1]
 
+        # For each session in last scan
+        for session in last_scan['sessions']:
+            # For each issue in last scan (in each session)
+            for issue in session['issues']:
+                # Check if issue is in second_to_last_scan :
+                in_second_to_last = False
+                for second_session in second_to_last_scan['sessions']:
+                    if issue in second_session['issues']:
+                        old_issue = issues.find_one({"Id": issue})
+                        issues.update({"Id": issue},
+                                      {"$set": {"Status": "Current", "OldStatus": old_issue['Status']}})
+                        in_second_to_last = True
+                        break
 
+                # Else it's a new issue
+                if not in_second_to_last:
+                    issues.update({"Id": issue},
+                                  {"$set": {"Status": "Current", "OldStatus": "-"}})
+
+        for second_session in second_to_last_scan['sessions']:
+            # For each issue in last scan (in each session)
+            for issue in second_session['issues']:
+                # Check if issue is in second_to_last_scan :
+                issue_found = False
+                last_session_id = None
+                for session in last_scan['sessions']:
+                    if session['plugin']['name'] == second_session['plugin']['name']:
+                        last_session_id = session["id"]
+                        if issue in session['issues']:
+                            issue_found = True
+                            break
+
+                # Else the issue is fixed
+                if not issue_found and last_session_id is not None:
+                    scans.update({"id": scan_id, "sessions.id": last_session_id},
+                                 {"$push": {"sessions.$.issues": issue}})
+
+                    old_issue = issues.find_one({"Id": issue})
+                    issues.update({"Id": issue},
+                                  {"$set": {"Status": "Fixed", "OldStatus": old_issue['Status']}})
+
+    else:
+        # It's the first scan, all issues are new
+        for session in last_scan['sessions']:
+            for issue in session['issues']:
+                issues.update({"Id": issue},
+                              {"$set": {"Status": "Current", "OldStatus": "-"}})
 
 
 # plugin_worker
@@ -496,6 +549,10 @@ def run_plugin(scan_id, session_id):
             send_task("minion.backend.tasks.session_finish",
                       [scan['id'], session['id'], 'FAILED', time.time(), failure],
                       queue='state').get()
+
+        send_task("minion.backend.tasks.set_status_issues",
+                  args=[scan_id],
+                  queue='state').get()
 
         return finished
 
