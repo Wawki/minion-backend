@@ -8,6 +8,9 @@ import os
 import sys
 import urlparse
 import uuid
+import hashlib
+import socket
+import traceback
 
 from twisted.internet import reactor
 from twisted.internet.threads import deferToThread
@@ -216,14 +219,24 @@ class ExternalProcessProtocol(ProcessProtocol):
             self.plugin.do_process_stdout(data)
         except Exception as e:
             logging.exception("Plugin threw an uncaught exception in do_process_stdout: " + str(e))
-            self.plugin.report_finish(state = AbstractPlugin.EXIT_STATE_FAILED)
+            fail = {
+                "hostname": socket.gethostname(),
+                "exception": traceback.format_exc(),
+                "message": "Plugin failed"
+            }
+            self.plugin.report_finish(AbstractPlugin.EXIT_STATE_FAILED, fail)
 
     def errReceived(self, data):
         try:
             self.plugin.do_process_stderr(data)
         except Exception as e:
             logging.exception("Plugin threw an uncaught exception in do_process_stderr: " + str(e))
-            self.plugin.report_finish(state = AbstractPlugin.EXIT_STATE_FAILED)
+            fail = {
+                "hostname": socket.gethostname(),
+                "exception": traceback.format_exc(),
+                "message": "Plugin failed"
+            }
+            self.plugin.report_finish(AbstractPlugin.EXIT_STATE_FAILED, fail)
 
     def processEnded(self, reason):
         logging.debug("ExternalProcessProtocol.processEnded: " + str(reason.value))
@@ -232,13 +245,23 @@ class ExternalProcessProtocol(ProcessProtocol):
                 self.plugin.do_process_ended(reason.value.status)
             except Exception as e:
                 logging.exception("Plugin threw an uncaught exception in do_process_ended: " + str(e))
-                self.plugin.report_finish(state = AbstractPlugin.EXIT_STATE_FAILED)
+                fail = {
+                    "hostname": socket.gethostname(),
+                    "exception": traceback.format_exc(),
+                    "message": "Plugin failed"
+                }
+                self.plugin.report_finish(AbstractPlugin.EXIT_STATE_FAILED, fail)
         elif isinstance(reason.value, ProcessDone):
             try:
                 self.plugin.do_process_ended(reason.value.status)
             except Exception as e:
                 logging.exception("Plugin threw an uncaught exception in do_process_ended: " + str(e))
-                self.plugin.report_finish(state = AbstractPlugin.EXIT_STATE_FAILED)
+                fail = {
+                    "hostname": socket.gethostname(),
+                    "exception": traceback.format_exc(),
+                    "message": "Plugin failed"
+                }
+                self.plugin.report_finish(AbstractPlugin.EXIT_STATE_FAILED, fail)
 
 class ExternalProcessPlugin(AbstractPlugin):
 
