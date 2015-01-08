@@ -165,6 +165,12 @@ if __name__ == "__main__":
                 os.mkdir(report_directory)
             except Exception as e:
                 logging.error("Cannot create report directory (%s): %s" % (report_directory, str(e)))
+                failure = {
+                    "message": "Failed to create report directory",
+                    "exception": traceback.format_exc(),
+                    "hostname": socket.gethostname()
+                }
+                callbacks.report_finish(state = AbstractPlugin.EXIT_STATE_FAILED, failure = failure)
                 sys.exit(1)
 
     #
@@ -177,6 +183,12 @@ if __name__ == "__main__":
             os.mkdir(work_directory)
         except Exception as e:
             logging.error("Cannot create work directory (%s): %s" % (options.work_directory, str(e)))
+            failure = {
+                "message": "Failed to create work directory",
+                "exception": traceback.format_exc(),
+                "hostname": socket.gethostname()
+            }
+            callbacks.report_finish(state = AbstractPlugin.EXIT_STATE_FAILED, failure = failure)
             sys.exit(1)
 
     os.chdir(work_directory)
