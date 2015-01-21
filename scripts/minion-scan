@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
       print "Scan state %s" % scan['state']
 
-      if scan['state'] in ('FINISHED', 'TERMINATED', 'FAILED'):
+      if scan['state'] in ('FINISHED', 'TERMINATED', 'FAILED', 'ABORTED'):
          for session in scan['sessions']:
             print session['plugin']['name']
             for issue in session['issues']:
