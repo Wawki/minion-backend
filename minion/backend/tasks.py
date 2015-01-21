@@ -250,14 +250,21 @@ def set_status_issues(scan_id):
                             issue_found = True
                             break
 
-                # Else the issue is fixed
-                if not issue_found and last_session_id is not None:
+                # Else the issue is fixed if the scan ended well
+                if not issue_found and last_session_id is not None: #
+                    # if not issue_found and last_session_id is not None:
                     scans.update({"id": scan_id, "sessions.id": last_session_id},
                                  {"$push": {"sessions.$.issues": issue}})
 
                     old_issue = issues.find_one({"Id": issue})
-                    issues.update({"Id": issue},
-                                  {"$set": {"Status": "Fixed", "OldStatus": old_issue['Status']}})
+
+                    state = "Fixed"
+
+                    # Fix only if scan finished well
+                    if session["state"] is not "FINISHED":
+                        state = old_issue['Status']
+                        
+                    issues.update({"Id": issue}, {"$set": {"Status": state, "OldStatus": old_issue['Status']}})
 
     else:
         # It's the first scan, all issues are new
