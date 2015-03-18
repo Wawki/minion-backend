@@ -154,9 +154,9 @@ class AbstractPlugin:
                     param = first_url["Parameter"] if "Parameter" in first_url else ""
                 if "Ports" in issue and issue["Ports"]:
                     port = issue["Ports"][0]
-                # Case web issue ( Hash => CWE_ID:URL:parameter )
+                # Case web issue ( Hash => Summary:CWE_ID:URL:parameter )
                 if param:
-                    id = cwe_id + ":" + url + ":" + param
+                    id = summary + ":" + cwe_id + ":" + url + ":" + param
                 # Case not a web issue ( Hash => Summary:CWE_ID:URL or Summary:CWE_ID:URL:Port )
                 else:
                     id = summary + ":" + cwe_id + ":" + url
