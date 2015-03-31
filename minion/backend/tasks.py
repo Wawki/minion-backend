@@ -258,7 +258,9 @@ def set_status_issues(scan_id):
                     state = "Fixed"
 
                     # Fix only if scan finished well
-                    if session["state"] is not "FINISHED":
+                    if session["state"] == "FINISHED":
+                        state = "Fixed"
+                    else:
                         state = old_issue['Status']
                         
                     issues.update({"Id": issue}, {"$set": {"Status": state, "OldStatus": old_issue['Status']}})
