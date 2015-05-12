@@ -184,12 +184,13 @@ def session_set_task_id(scan_id, session_id, task_id):
 def session_report_issue(scan_id, session_id, issue):
     # Check if the issue already exists.
     # If not, insert it in the collection then put the reference in the scan,
-    # else put the reference in the scan and update the severity
+    # else put the reference in the scan and update the severity and description
     found_issue = issues.find_one({"Id": issue["Id"]})
     if found_issue is None:
         issues.insert(issue)
     else:
-        issues.update({"Id": issue["Id"]}, {"$set": {"Severity": issue["Severity"]}})
+        issues.update({"Id": issue["Id"]}, {"$set": {"Severity": issue["Severity"],
+                                                     "Description": issue["Description"]}})
     scans.update({"id": scan_id, "sessions.id": session_id},
                  {"$push": {"sessions.$.issues": issue["Id"]}})
 
