@@ -11,7 +11,8 @@ from flask import jsonify, request
 import minion.backend.utils as backend_utils
 import minion.backend.tasks as tasks
 from minion.backend.app import app
-from minion.backend.views.base import api_guard, plans, plugins, users, sites, groups
+from minion.backend.views.base import api_guard, plans, plugins, users, sites, groups, scans, issues
+
 
 def _plan_description(plan):
     return {
@@ -20,11 +21,14 @@ def _plan_description(plan):
         'workflow': plan['workflow'],
         'created' : plan['created'] }
 
+
 def get_plan_by_plan_name(plan_name):
     return plans.find_one({'name': plan_name})
 
+
 def get_sanitized_plans():
     return [sanitize_plan(_plan_description(plan)) for plan in plans.find()]
+
 
 def _check_plan_by_email(email, plan_name):
     plan = plans.find_one({'name': plan_name})
@@ -39,10 +43,12 @@ def _check_plan_by_email(email, plan_name):
                 matches += 1
         return matches
 
+
 def get_plans_by_email(email):
     plans = get_sanitized_plans()
     matched_plans = [plan for plan in plans if _check_plan_by_email(email, plan["name"])]
     return matched_plans
+
 
 def permission(view):
     @functools.wraps(view)
@@ -59,6 +65,7 @@ def permission(view):
         return view(*args, **kwargs) # if groupz.count is not zero, or user is admin
     return has_permission
 
+
 def sanitize_plan(plan):
     if plan.get('_id'):
         del plan['_id']
@@ -67,14 +74,17 @@ def sanitize_plan(plan):
             plan[field] = calendar.timegm(plan[field].utctimetuple())
     return plan
 
+
 def _split_plugin_class_name(plugin_class_name):
     e = plugin_class_name.split(".")
     return '.'.join(e[:-1]), e[-1]
+
 
 def _import_plugin(plugin_class_name):
     package_name, class_name = _split_plugin_class_name(plugin_class_name)
     plugin_module = importlib.import_module(package_name, class_name)
     return getattr(plugin_module, class_name)
+
 
 def _check_plan_workflow(workflow):
     """ Ensure plan workflow contain valid structure. """
@@ -95,6 +105,7 @@ def _check_plan_workflow(workflow):
         except (AttributeError, ImportError):
             return False
     return True
+
 
 def _check_plan_exists(plan_name):
     return plans.find_one({'name': plan_name}) is not None
@@ -149,7 +160,117 @@ def delete_plan(plan_name):
         return jsonify(success=False, reason="Plan does not exist.")
     # Remove the plan
     plans.remove({'name': plan_name})
+
+    # Delete cascade mentions of plan
+    remove_plan(plan_name)
+
     return jsonify(success=True)
+
+
+# Delete every issues and scan with the same target and plan
+# param scan_id : id of the scan to delete
+def remove_similar_scan(scan_id):
+    # Obtain information about the scan and its target
+    scan = scans.find_one({"id": scan_id})
+
+    # Check the scan exists
+    if scan is None:
+        print "No entry found"
+        return
+
+    # Get every scan with the same configuration and target
+    list_scan = list(
+        scans.find({'configuration.target': scan['configuration']['target'], 'plan.name': scan['plan']['name']}).sort(
+            "created", -1))
+
+    # Get the ID of every scan with the same configuration
+    for prev_scan in list_scan:
+        print "to delete : " + prev_scan["id"] + "\n"
+
+        # Delete the scan
+        delete_scan(prev_scan["id"])
+
+
+# Find issues of scan
+# param scan_id : string id of the scan
+# returns : array containing id of issues from the scan
+def find_issues(scan_id):
+    return scans.find({"id": scan_id}).distinct("sessions.issues")
+
+
+# Delete issues only existing in scan (no other dependencies)
+# param scan_id : string id of the scan
+#
+def delete_issues(scan_id):
+    # Get issues from the scan
+    scan_issues = find_issues(scan_id)
+
+    # Browse each issue
+    to_delete = []
+    for issue in scan_issues:
+        # Find others scan for this issue
+        res = scans.find({"sessions.issues": issue, "id": {"$ne": scan_id}}, {"id": 1, "_id": 0})
+
+        # Add issue to delete list if no other scan is linked
+        if res.count() == 0:
+            to_delete.append(issue)
+
+    # Delete issues
+    for delete in to_delete:
+        issues.remove({"Id": delete})
+
+    return to_delete
+
+
+# Get every existing scan for a given plan
+# param plan : string containing name of the plan
+# return : array of scan id
+def get_scans(plan):
+    # Get every scan with this plan
+    res = list(scans.find({'plan.name': plan}, {"id": 1, "_id": 0}))
+
+    # Format result
+    ids = []
+    for myid in res:
+        ids.append(myid["id"])
+
+    return ids
+
+
+# Delete every issue only linked to the scan, then delete the scan
+# param : scan_id to delete
+def delete_scan(scan_id):
+    # Remove the issues
+    removed = delete_issues(scan_id)
+
+    # Remove the scan
+    scans.remove({"id": scan_id})
+
+    return "removed " + str(len(removed)) + " issues and scan " + scan_id
+
+
+# Delete every trace of existing plan
+# Warning no coming back, this removes permanently the plan and results from the data-base
+# param : name of the plan
+def remove_plan(plan):
+    # Get id of scan containing this plan
+    to_delete = get_scans(plan)
+
+    # Delete every instance of each scan
+    for line in to_delete:
+        remove_similar_scan(line)
+
+    # Get id of every site containing the plan
+    res = list(sites.find({'plans': plan}, {"id": 1, "_id": 0, "plans": 1}))
+
+    for site in res:
+        # Remove old plan from their list
+        site_plans = site["plans"]
+        site_plans.remove(plan)
+
+        # Update the record of the site
+        sites.update({"id": site["id"]}, {"$set": {"plans": site_plans}})
+
 
 #
 # Create a new plan
