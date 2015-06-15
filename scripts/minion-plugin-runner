@@ -143,10 +143,23 @@ if __name__ == "__main__":
     callbacks = JSONCallbacks()
 
     #
+    # Setup the report directory if it does not exist yet and is specified in configuration
+    #
+    if 'report_dir' in configuration:
+        report_directory = configuration['report_dir']
+
+        if not os.path.exists(report_directory):
+            try:
+                os.mkdir(report_directory)
+            except Exception as e:
+                logging.error("Cannot create report directory (%s): %s" % (report_directory, str(e)))
+                sys.exit(1)
+
+    #
     # Setup the work directory if it does not exist yet
     #
-
     work_directory = os.path.join(options.work_root, plugin_session_id)
+
     if not os.path.exists(work_directory):
         try:
             os.mkdir(work_directory)
