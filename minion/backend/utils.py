@@ -120,8 +120,13 @@ def scannable(target, whitelist=[], blacklist=[]):
 
     addresses = []
 
-    infos = socket.getaddrinfo(url.hostname, None, 0, socket.SOCK_STREAM,
+    try:
+        infos = socket.getaddrinfo(url.hostname, None, 0, socket.SOCK_STREAM,
                                socket.IPPROTO_IP, socket.AI_CANONNAME)
+    except Exception as e:
+        raise Exception("Could not lookup the host, target ist mostly unreachable. "
+                        "Error message was %s" % e)
+
     for info in infos:
         if info[0] == socket.AF_INET or info[0] == socket.AF_INET6:
             addresses.append(info[4][0])
