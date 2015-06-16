@@ -11,7 +11,7 @@ from flask import jsonify, request
 import minion.backend.utils as backend_utils
 import minion.backend.tasks as tasks
 from minion.backend.app import app
-from minion.backend.views.base import api_guard, plans, plugins, users, sites, groups, scans, issues
+from minion.backend.views.base import api_guard, plans, plugins, users, sites, groups, scans
 
 
 def _plan_description(plan):
@@ -21,14 +21,11 @@ def _plan_description(plan):
         'workflow': plan['workflow'],
         'created' : plan['created'] }
 
-
 def get_plan_by_plan_name(plan_name):
     return plans.find_one({'name': plan_name})
 
-
 def get_sanitized_plans():
     return [sanitize_plan(_plan_description(plan)) for plan in plans.find()]
-
 
 def _check_plan_by_email(email, plan_name):
     plan = plans.find_one({'name': plan_name})
@@ -43,12 +40,10 @@ def _check_plan_by_email(email, plan_name):
                 matches += 1
         return matches
 
-
 def get_plans_by_email(email):
     plans = get_sanitized_plans()
     matched_plans = [plan for plan in plans if _check_plan_by_email(email, plan["name"])]
     return matched_plans
-
 
 def permission(view):
     @functools.wraps(view)
@@ -65,7 +60,6 @@ def permission(view):
         return view(*args, **kwargs) # if groupz.count is not zero, or user is admin
     return has_permission
 
-
 def sanitize_plan(plan):
     if plan.get('_id'):
         del plan['_id']
@@ -74,17 +68,14 @@ def sanitize_plan(plan):
             plan[field] = calendar.timegm(plan[field].utctimetuple())
     return plan
 
-
 def _split_plugin_class_name(plugin_class_name):
     e = plugin_class_name.split(".")
     return '.'.join(e[:-1]), e[-1]
-
 
 def _import_plugin(plugin_class_name):
     package_name, class_name = _split_plugin_class_name(plugin_class_name)
     plugin_module = importlib.import_module(package_name, class_name)
     return getattr(plugin_module, class_name)
-
 
 def _check_plan_workflow(workflow):
     """ Ensure plan workflow contain valid structure. """
@@ -105,7 +96,6 @@ def _check_plan_workflow(workflow):
         except (AttributeError, ImportError):
             return False
     return True
-
 
 def _check_plan_exists(plan_name):
     return plans.find_one({'name': plan_name}) is not None
