@@ -131,7 +131,7 @@ def create_user():
         if not _check_group_exists(group_name):
             return jsonify(success=False, reason='unknown-group')
 
-    if user.get("role") not in ("user", "administrator"):
+    if user.get("role") not in ("user", "administrator", "readonly"):
         return jsonify(success=False, reason="invalid-role")
 
     new_user = { 'id': str(uuid.uuid4()),
@@ -183,7 +183,7 @@ def update_user(user_email):
             if not _check_group_exists(group_name):
                 return jsonify(success=False, reason='unknown-group')
     if 'role' in new_user:
-        if new_user["role"] not in ("user", "administrator"):
+        if new_user["role"] not in ("user", "administrator", "readonly"):
             return jsonify(success=False, reason="invalid-role")
     if 'status' in new_user:
         if new_user['status'] not in ('active', 'banned'):
