@@ -167,7 +167,10 @@ class AbstractPlugin:
 
                 hash_id = hashlib.sha256(id.encode())
                 issue['Id'] = hash_id.hexdigest()
-                issue['Status'] = ''
+                if not 'False_positive' in issue:
+                    issue['False_positive'] = False
+                if not 'Ignored' in issue:
+                    issue['Ignored'] = False
             self.callbacks.report_issues(issues)
 
     def report_issue(self, issue):
