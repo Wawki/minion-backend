@@ -189,8 +189,9 @@ def session_report_issue(scan_id, session_id, issue):
     if found_issue is None:
         issues.insert(issue)
     else:
+        description = issue["Description"] if "Description" in issue else "No Description available"
         issues.update({"Id": issue["Id"]}, {"$set": {"Severity": issue["Severity"],
-                                                     "Description": issue["Description"]}})
+                                                     "Description": description}})
     scans.update({"id": scan_id, "sessions.id": session_id},
                  {"$push": {"sessions.$.issues": issue["Id"]}})
 
@@ -521,7 +522,12 @@ def run_plugin(scan_id, session_id):
                     logger.error("Plugin emitted (ignored) message after finishing: " + line)
                     return
 
-                msg = json.loads(line)
+                try:
+                    msg = json.loads(line)
+                except Exception as e:
+                    logger.error("Could not decode: " + line)
+
+                    # raise Exception(e.message + str(line))
 
                 # Issue: persist it
                 if msg['msg'] == 'issue':
