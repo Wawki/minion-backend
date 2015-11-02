@@ -232,7 +232,7 @@ def set_status_issues(scan_id):
                     if issue in second_session['issues']:
                         old_issue = issues.find_one({"Id": issue})
                         issues.update({"Id": issue},
-                                      {"$set": {"Status": "Current", "OldStatus": old_issue['Status']}})
+                                      {"$set": {"Status": old_issue["Status"], "OldStatus": old_issue['Status']}})
                         in_second_to_last = True
                         break
 

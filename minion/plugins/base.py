@@ -158,10 +158,14 @@ class AbstractPlugin:
                     port = issue["Ports"][0]
                 # Case web issue ( Hash => Summary:CWE_ID:URL:parameter )
                 if param:
-                    id = summary + ":" + cwe_id + ":" + url + ":" + param
+                    try:
+                        id = summary + ":" + str(cwe_id) + ":" + url + ":" + param
+                    except:
+                        raise Exception(issue)
+
                 # Case not a web issue ( Hash => Summary:CWE_ID:URL or Summary:CWE_ID:URL:Port )
                 else:
-                    id = summary + ":" + cwe_id + ":" + url
+                    id = summary + ":" + str(cwe_id) + ":" + url
                     if port:
                         id += ":" + str(port)
 
@@ -179,7 +183,10 @@ class AbstractPlugin:
 
     def report_finish(self, state=EXIT_STATE_FINISHED, failure=""):
         self.callbacks.report_finish(state=state, failure=failure)
-        reactor.stop()
+        try:
+            reactor.stop()
+        except Exception as e:
+            pass  # TODO FIXME : investigate why it is needed
 
     def format_report(self, issue_key, format_list):
         issue = copy.deepcopy(self.REPORTS[issue_key])
