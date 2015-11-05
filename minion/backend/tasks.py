@@ -191,7 +191,8 @@ def session_report_issue(scan_id, session_id, issue):
     else:
         description = issue["Description"] if "Description" in issue else "No Description available"
         issues.update({"Id": issue["Id"]}, {"$set": {"Severity": issue["Severity"],
-                                                     "Description": description}})
+                                                     "Description": description,
+                                                     "URLs": issue["URLs"]}})
     scans.update({"id": scan_id, "sessions.id": session_id},
                  {"$push": {"sessions.$.issues": issue["Id"]}})
 

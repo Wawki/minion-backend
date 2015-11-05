@@ -144,6 +144,13 @@ class AbstractPlugin:
     def report_issues(self, issues):
         if issues:
             for issue in issues:
+                if not 'Status' in issue:
+                    issue['Status'] = ''
+
+                # Check if an ID already exists
+                if issue.get('Id'):
+                    continue
+
                 # Generate a unique Id for each issue
                 summary = issue["Summary"] if ("Summary" in issue) else ""
                 cwe_id = issue["Classification"]["cwe_id"] if "Classification" in issue and "cwe_id" in issue["Classification"] else ""
@@ -171,8 +178,7 @@ class AbstractPlugin:
 
                 hash_id = hashlib.sha256(id.encode())
                 issue['Id'] = hash_id.hexdigest()
-                if not 'Status' in issue:
-                    issue['Status'] = ''
+
             self.callbacks.report_issues(issues)
 
     def report_issue(self, issue):
