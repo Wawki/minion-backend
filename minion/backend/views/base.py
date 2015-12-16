@@ -4,17 +4,14 @@ import calendar
 import functools
 import importlib
 import inspect
-import json
 import pkgutil
-import operator
-import os
 
-from flask import abort, Flask, jsonify, request, session
 from pymongo import MongoClient
 
-from minion.backend.app import app
 import minion.backend.utils as backend_utils
-import minion.backend.tasks as tasks
+import os
+from flask import abort, request
+from minion.backend.app import app
 from minion.plugins.base import AbstractPlugin
 
 backend_config = backend_utils.backend_config()
@@ -112,6 +109,7 @@ def _check_required_fields(expected, fields):
             return False
     return True
 
+
 def sanitize_session(session):
     for field in ('created', 'queued', 'started', 'finished'):
         if session.get(field) is not None:
@@ -125,6 +123,7 @@ def sanitize_session(session):
             artifact['paths'][idx] = os.path.basename(path)
 
     return session
+
 
 def sanitize_time(t):
     return calendar.timegm(t.utctimetuple())

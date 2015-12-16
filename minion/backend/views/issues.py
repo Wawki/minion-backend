@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from flask import jsonify, request
-from minion.backend.views.base import api_guard, groups, sites, scans, issues, sanitize_time
+from minion.backend.views.base import api_guard, groups, scans, issues, sanitize_time
 from minion.backend.app import app
 from minion.backend.views.scans import permission
 
@@ -91,3 +91,33 @@ def tag_issue():
         return jsonify(success=False, reason="no-such-issue")
 
     return jsonify(success=True)
+
+
+# Find issues of scan
+# param scan_id : string id of the scan
+# returns : array containing id of issues from the scan
+def find_issues(scan_id):
+    return scans.find({"id": scan_id}).distinct("sessions.issues")
+
+
+# Delete issues only existing in scan (no other dependencies)
+# param scan_id : string id of the scan
+def delete_issues(scan_id):
+    # Get issues from the scan
+    scan_issues = find_issues(scan_id)
+
+    # Browse each issue
+    to_delete = []
+    for issue in scan_issues:
+        # Find others scan for this issue
+        res = scans.find({"sessions.issues": issue, "id": {"$ne": scan_id}}, {"id": 1, "_id": 0})
+
+        # Add issue to delete list if no other scan is linked
+        if res.count() == 0:
+            to_delete.append(issue)
+
+    # Delete issues
+    for delete in to_delete:
+        issues.remove({"Id": delete})
+
+    return to_delete

@@ -9,8 +9,9 @@ from flask import jsonify, request, send_file
 import minion.backend.utils as backend_utils
 import minion.backend.tasks as tasks
 from minion.backend.app import app
-from minion.backend.views.base import api_guard, groups, plans, plugins, scans, sanitize_session, users, sites, issues
+from minion.backend.views.base import api_guard, groups, plans, plugins, scans, sanitize_session, users, sites
 from minion.backend.views.plans import sanitize_plan
+
 
 def permission(view):
     @functools.wraps(view)
@@ -190,6 +191,7 @@ def put_scan_control(scan_id):
         tasks.scan_stop.apply_async([scan['id']], queue='state')
     return jsonify(success=True)
 
+
 @app.route("/scans/<scan_id>/artifact/<artifact_name>", methods=["GET"])
 @permission
 def get_artifact(scan_id, artifact_name):
@@ -204,3 +206,54 @@ def get_artifact(scan_id, artifact_name):
                 if artifact_name in path:
                     return send_file(path)
     return jsonify(success=False, error='no-such-artifact')
+
+
+# Delete every issues and scan with the same target and plan
+# param scan_id : id of the scan to delete
+def remove_similar_scan(scan_id):
+    # Obtain information about the scan and its target
+    scan = scans.find_one({"id": scan_id})
+
+    # Check the scan exists
+    if scan is None:
+        print "No entry found"
+        return
+
+    # Get every scan with the same configuration and target
+    list_scan = list(
+        scans.find({'configuration.target': scan['configuration']['target'], 'plan.name': scan['plan']['name']}).sort(
+            "created", -1))
+
+    # Get the ID of every scan with the same configuration
+    for prev_scan in list_scan:
+        # Delete the scan
+        delete_scan(prev_scan["id"])
+
+
+# Get every existing scan for a given plan
+# param plan : string containing name of the plan
+# return : array of scan id
+def get_scans_ids(plan):
+    # Get every scan with this plan
+    res = list(scans.find({'plan.name': plan}, {"id": 1, "_id": 0}))
+
+    # Format result
+    ids = []
+    for myid in res:
+        ids.append(myid["id"])
+
+    return ids
+
+
+# Delete every issue only linked to the scan, then delete the scan
+# param : scan_id to delete
+def delete_scan(scan_id):
+    from minion.backend.views.issues import delete_issues
+
+    # Remove the issues
+    removed = delete_issues(scan_id)
+
+    # Remove the scan
+    scans.remove({"id": scan_id})
+
+    return "removed " + str(len(removed)) + " issues and scan " + scan_id

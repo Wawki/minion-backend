@@ -7,7 +7,8 @@ import uuid
 from flask import jsonify, request
 
 from minion.backend.app import app
-from minion.backend.views.base import _check_required_fields, api_guard, groups, sites
+from minion.backend.views.base import _check_required_fields, api_guard, groups, sites, scans
+from minion.backend.views.scans import remove_similar_scan
 from minion.backend.views.groups import _check_group_exists
 from minion.backend.views.plans import _check_plan_exists
 
@@ -200,6 +201,59 @@ def update_site(site_id):
         return jsonify(success=False, reason='no-such-site')
     site['groups'] = _find_groups_for_site(site['url'])
     return jsonify(success=True, site=sanitize_site(site))
+
+
+# Remove EVERYTHING related to the site
+# param : site_id id of the target to remove
+#
+#  DELETE /sites/<site_id>
+#
+@app.route('/sites/<site_id>', methods=['DELETE'])
+@api_guard
+def remove_site(site_id):
+    # Get info about site
+    site = sites.find_one({'id': site_id})
+
+    # Check the target exists
+    if not site:
+        return jsonify(success=False, reason="site not found")
+
+    # Get url of the target
+    target = site.get("url")
+    delete_plans = []
+
+    # Find a scan id for every plan
+    for plan in site.get("plans"):
+        res = scans.find_one({'plan.name': plan, 'configuration.target': target}, {"id": 1, "_id": 0})
+
+        # Check if result
+        if not res:
+            continue
+
+        scan_id = res.get("id")
+
+        delete_plans.append(scan_id)
+
+    # Remove_all plan scan
+    for scan_id in delete_plans:
+        remove_similar_scan(scan_id)
+
+    # Remove site from groups
+    for group_name in _find_groups_for_site(target):
+        groups.update({'name': group_name}, {'$pull': {'sites': target}})
+
+    # Remove site for existence
+    res = sites.remove({"id": site_id})
+
+    # Check the deletion worked
+    if res.get('n') != 1:
+        err = "Something went wrong during deletion of site"
+        success = False
+    else:
+        err = ""
+        success = True
+
+    return jsonify(success=success, reason=err)
 
 #
 # Returns a list of sites or return the site matches the query. Currently
