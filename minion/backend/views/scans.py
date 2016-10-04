@@ -122,6 +122,13 @@ def post_scan_create():
     plan = plans.find_one({"name": configuration['plan']})
     if not plan:
         return jsonify(success=False)
+
+    # Get additional tags for target
+    res = sites.find_one({'url': configuration['configuration']['target']}, {"_id": 0, "tags": 1})
+
+    if res:
+        configuration['configuration']['tags'] = res["tags"]
+
     # Merge the configuration
     # Create a scan object
     now = datetime.datetime.utcnow()
